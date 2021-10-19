@@ -1,0 +1,19 @@
+{
+  "name": "small-promise",
+  "version": "0.10.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fernandou/Promise.git"
+  },
+  "author": "fernandou",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fernandou/Promise/issues"
+  },
+  "homepage": "https://github.com/fernandou/Promise#readme"
+}
