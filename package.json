@@ -14,7 +14,7 @@
     "Promise", "then"
   ],
   "author": "fernandou",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/fernandou/Promise/issues"
   },
