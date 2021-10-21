@@ -19,13 +19,11 @@
   Promise.prototype.then = function () {
     const resolveFun = arguments[0]
     const rejectFun = arguments[1] || noop
+    this.resolveQueue.push(resolveFun)
+    this.rejectQueue.push(rejectFun)
     if (this.status === STATUS_PEDDING) {
-      this.resolveQueue.push(resolveFun)
-      if (rejectFun) {
-        this.rejectQueue.push(rejectFun)
-      }
+
     } else if (this.status === STATUS_RESOLVE) {
-      this.resolveQueue.push(resolveFun)
       if (waiting === false) {
         waiting = true
         nextTick(() => {
@@ -33,7 +31,6 @@
         })
       }
     } else if (this.status === STATUS_REJECT) {
-      this.rejectQueue.push(rejectFun)
       if (waiting === false) {
         waiting = true
         nextTick(() => {
@@ -52,7 +49,6 @@
     }
   }
 
-  // thanks for Vue1.0
   function batch(queue) {
     while (queue.length) {
       const singleFun = queue.shift();
@@ -66,11 +62,15 @@
         }
         rs.resolveQueue = queue
         rs.rejectQueue = queueContext.rejectQueue
+        rs.resolveQueue.context = rs
+        rs.rejectQueue.context = rs
         queueContext.resolveQueue = []
         queueContext.rejectQueue = []
         queue.context = rs
         if (rs.status === STATUS_PEDDING) {
           break
+        }else if (rs.status === STATUS_REJECT) {
+          queue = rs.rejectQueue
         }
       } else if (queueContext.status === STATUS_REJECT) {
         queueContext.resolveQueue.shift()
@@ -80,11 +80,15 @@
         }
         rs.resolveQueue = queueContext.resolveQueue
         rs.rejectQueue = queue
+        rs.resolveQueue.context = rs
+        rs.rejectQueue.context = rs
         queueContext.resolveQueue = []
         queueContext.rejectQueue = []
         queue.context = rs
         if (rs.status === STATUS_PEDDING) {
           break
+        }else if (rs.status === STATUS_RESOLVE) {
+          queue = rs.resolveQueue
         }
       }
     }
@@ -127,6 +131,7 @@
     this.emit(STATUS_REJECT)
   }
 
+  // thanks for Vue1.0
   let waiting = false
   function nextTick(callback) {
     setTimeout(() => {
