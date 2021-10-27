@@ -16,12 +16,27 @@
   }
 
   Promise.prototype.then = function () {
-    const resolveFun = arguments[0]
-    const rejectFun = arguments[1] || noop
-    this.queue.push({
-      resolve: resolveFun,
-      reject: rejectFun
+    if(arguments.length===0){
+      return this
+    }
+    //定义一个全新的promise用于收集then
+    const nextPromise = new Promise((resolve, reject) => {
+
     })
+    const twoFun = {}
+    
+    if(arguments[0] && typeof arguments[0] === 'function'){
+      const resolveFun = arguments[0]
+      resolveFun.nextPromise = nextPromise
+      twoFun.resolve = resolveFun
+    }
+    if(arguments[1] && typeof arguments[1] === 'function'){
+      const rejectFun = arguments[1]
+      rejectFun.nextPromise = nextPromise
+      twoFun.reject = rejectFun
+    }
+    this.queue.push(twoFun)
+
     if (this.status === STATUS_PEDDING) {
 
     } else {
@@ -33,35 +48,57 @@
         })
       }
     }
-    const nextPromise = new Promise((resolve, reject) => {
 
-    })
-    resolveFun.nextPromise = nextPromise
-    rejectFun.nextPromise = nextPromise
     return nextPromise
+  }
+
+  Promise.prototype.catch = function (callback) {
+    return this.then(undefined,callback)
   }
 
   function batch(promise) {
     const queue = promise.queue
     while (queue.length) {
       const twoFun = queue.shift();
-      let nextPromise = twoFun[promise.status].nextPromise
-      const newPromise = twoFun[promise.status](promise.status === STATUS_RESOLVE ? promise.reason : promise.error)
-
-      if (!isPromise(newPromise)) {
-        nextPromise.status = STATUS_RESOLVE
-        nextPromise.reason = newPromise
-      } else {
-        newPromise.queue = nextPromise.queue
-        nextPromise = newPromise
-      }
-
-      if (nextPromise.status !== STATUS_PEDDING) {
-        nextTick(() => {
-          if (nextPromise.queue.length) {
-            batch(nextPromise)
-          }
-        })
+      let nextPromise
+      // 如果没有resolveFun，就相当于跨过这个then
+      if(promise.status===STATUS_RESOLVE && !twoFun[promise.status]){
+        if(twoFun[STATUS_REJECT]){
+          nextPromise = twoFun[STATUS_REJECT].nextPromise
+          promise.queue.unshift({
+            resolve: nextPromise.queue[0].resolve,
+            reject: nextPromise.queue[0].reject
+          })
+          nextPromise.queue.shift()
+        }
+      }else if(promise.status===STATUS_REJECT && !twoFun[promise.status]){
+        // 如果没有rejectFun，就相当于跨过这个then
+        if(twoFun[STATUS_RESOLVE]){
+          nextPromise = twoFun[STATUS_RESOLVE].nextPromise
+          promise.queue.unshift({
+            resolve: nextPromise.queue[0].resolve,
+            reject: nextPromise.queue[0].reject
+          })
+          nextPromise.queue.shift()
+        }
+      }else{
+        nextPromise = twoFun[promise.status].nextPromise
+        const newPromise = twoFun[promise.status](promise.status === STATUS_RESOLVE ? promise.reason : promise.error)
+  
+        if (!isPromise(newPromise)) {
+          nextPromise.status = STATUS_RESOLVE
+          nextPromise.reason = newPromise
+        } else {
+          newPromise.queue = nextPromise.queue
+          nextPromise = newPromise
+        }
+        if (nextPromise.status !== STATUS_PEDDING) {
+          nextTick(() => {
+            if (nextPromise.queue.length) {
+              batch(nextPromise)
+            }
+          })
+        }
       }
     }
   }
