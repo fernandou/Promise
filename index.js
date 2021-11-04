@@ -19,7 +19,7 @@
     if(arguments.length===0){
       return this
     }
-    //定义一个全新的promise用于收集then
+    //define a brand new promise for collecting then
     const nextPromise = new Promise((resolve, reject) => {
 
     })
@@ -61,7 +61,7 @@
     while (queue.length) {
       const twoFun = queue.shift();
       let nextPromise
-      // 如果没有resolveFun，就相当于跨过这个then
+      // without a resolveFun，it amounts to crossing to this then
       if(promise.status===STATUS_RESOLVE && !twoFun[promise.status]){
         if(twoFun[STATUS_REJECT]){
           nextPromise = twoFun[STATUS_REJECT].nextPromise
@@ -72,7 +72,7 @@
           nextPromise.queue.shift()
         }
       }else if(promise.status===STATUS_REJECT && !twoFun[promise.status]){
-        // 如果没有rejectFun，就相当于跨过这个then
+        // without a rejectFun，it amounts to crossing to this then
         if(twoFun[STATUS_RESOLVE]){
           nextPromise = twoFun[STATUS_RESOLVE].nextPromise
           promise.queue.unshift({
@@ -160,9 +160,6 @@
     return obj instanceof Promise
   }
 
-  function noop() {
-
-  }
   return Promise
 }))
 
