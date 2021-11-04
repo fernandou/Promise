@@ -5,18 +5,19 @@
 }(this, function () {
   'use strict';
 
-  //three status
-  const STATUS_PEDDING = 'pedding'
-  const STATUS_RESOLVE = 'resolve'
-  const STATUS_REJECT = 'reject'
+  //three state
+  const STATE_PEDDING = 'pedding'
+  const STATE_RESOLVE = 'resolve'
+  const STATE_REJECT = 'reject'
   function Promise(callback) {
-    this.status = STATUS_PEDDING
+    this.state = STATE_PEDDING
     this.queue = []
+    this.result = null
     callback(resolve.bind(this), reject.bind(this))
   }
 
   Promise.prototype.then = function () {
-    if(arguments.length===0){
+    if (arguments.length === 0 || (typeof arguments[0] !== 'function' && typeof arguments[1] !== 'function')) {
       return this
     }
     //define a brand new promise for collecting then
@@ -24,20 +25,20 @@
 
     })
     const twoFun = {}
-    
-    if(arguments[0] && typeof arguments[0] === 'function'){
+
+    if (arguments[0] && typeof arguments[0] === 'function') {
       const resolveFun = arguments[0]
       resolveFun.nextPromise = nextPromise
       twoFun.resolve = resolveFun
     }
-    if(arguments[1] && typeof arguments[1] === 'function'){
+    if (arguments[1] && typeof arguments[1] === 'function') {
       const rejectFun = arguments[1]
       rejectFun.nextPromise = nextPromise
       twoFun.reject = rejectFun
     }
     this.queue.push(twoFun)
 
-    if (this.status === STATUS_PEDDING) {
+    if (this.state === STATE_PEDDING) {
 
     } else {
       if (waiting === false) {
@@ -53,7 +54,7 @@
   }
 
   Promise.prototype.catch = function (callback) {
-    return this.then(undefined,callback)
+    return this.then(undefined, callback)
   }
 
   function batch(promise) {
@@ -62,37 +63,42 @@
       const twoFun = queue.shift();
       let nextPromise
       // without a resolveFun，it amounts to crossing to this then
-      if(promise.status===STATUS_RESOLVE && !twoFun[promise.status]){
-        if(twoFun[STATUS_REJECT]){
-          nextPromise = twoFun[STATUS_REJECT].nextPromise
-          promise.queue.unshift({
-            resolve: nextPromise.queue[0].resolve,
-            reject: nextPromise.queue[0].reject
-          })
-          nextPromise.queue.shift()
+      if (promise.state === STATE_RESOLVE && !twoFun[promise.state]) {
+        if (twoFun[STATE_REJECT]) {
+          nextPromise = twoFun[STATE_REJECT].nextPromise
+          if (nextPromise.queue.length) {
+            promise.queue.unshift({
+              resolve: nextPromise.queue[0].resolve,
+              reject: nextPromise.queue[0].reject
+            })
+            nextPromise.queue.shift()
+          }
         }
-      }else if(promise.status===STATUS_REJECT && !twoFun[promise.status]){
+      } else if (promise.state === STATE_REJECT && !twoFun[promise.state]) {
         // without a rejectFun，it amounts to crossing to this then
-        if(twoFun[STATUS_RESOLVE]){
-          nextPromise = twoFun[STATUS_RESOLVE].nextPromise
-          promise.queue.unshift({
-            resolve: nextPromise.queue[0].resolve,
-            reject: nextPromise.queue[0].reject
-          })
-          nextPromise.queue.shift()
+        if (twoFun[STATE_RESOLVE]) {
+          nextPromise = twoFun[STATE_RESOLVE].nextPromise
+          if (nextPromise.queue.length) {
+            promise.queue.unshift({
+              resolve: nextPromise.queue[0].resolve,
+              reject: nextPromise.queue[0].reject
+            })
+            nextPromise.queue.shift()
+          }
         }
-      }else{
-        nextPromise = twoFun[promise.status].nextPromise
-        const newPromise = twoFun[promise.status](promise.status === STATUS_RESOLVE ? promise.reason : promise.error)
-  
+      } else {
+        nextPromise = twoFun[promise.state].nextPromise
+        const newPromise = twoFun[promise.state](promise.result)
+
         if (!isPromise(newPromise)) {
-          nextPromise.status = STATUS_RESOLVE
-          nextPromise.reason = newPromise
+          nextPromise.state = STATE_RESOLVE
+          nextPromise.result = newPromise
         } else {
           newPromise.queue = nextPromise.queue
           nextPromise = newPromise
         }
-        if (nextPromise.status !== STATUS_PEDDING) {
+        if (nextPromise.state !== STATE_PEDDING) {
+          //use nextTick if the prev promise queue length
           nextTick(() => {
             if (nextPromise.queue.length) {
               batch(nextPromise)
@@ -103,43 +109,40 @@
     }
   }
   Promise.resolve = function (promise, reason) {
+    if (isPromise(promise)) {
+      return promise
+    }
     return promiseFactory('resolve', promise, reason)
   }
 
   Promise.reject = function (promise, error) {
+    if (isPromise(promise)) {
+      return promise
+    }
     return promiseFactory('reject', promise, error)
   }
 
-  function promiseFactory(type, promise, reasonOrError) {
-    if (isPromise(promise)) {
-      if (type === 'resolve') {
-        resolve.apply(promise,reasonOrError)
-      } else if (type === 'reject') {
-        reject.apply(promise,reasonOrError)
-      }
-      return promise
-    }else{
-      if (type === 'resolve') {
-        return new Promise((resolve, reject) => {
-          resolve(reasonOrError)
-        })
-      } else if (type === 'reject') {
-        return new Promise((resolve, reject) => {
-          reject(reasonOrError)
-        })
-      }
+  function promiseFactory(type, promise, result) {
+    if (type === 'resolve') {
+      return new Promise((resolve, reject) => {
+        resolve(result)
+      })
+    } else if (type === 'reject') {
+      return new Promise((resolve, reject) => {
+        reject(result)
+      })
     }
   }
 
   function resolve(reason) {
-    this.status = STATUS_RESOLVE
-    this.reason = reason
+    this.state = STATE_RESOLVE
+    this.result = reason
     batch(this)
   }
 
   function reject(error) {
-    this.status = STATUS_REJECT
-    this.error = error
+    this.state = STATE_REJECT
+    this.result = error
     batch(this)
   }
 
