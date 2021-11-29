@@ -1,6 +1,6 @@
 {
   "name": "small-promise",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "a small promise meet daily needs",
   "main": "index.js",
   "scripts": {
