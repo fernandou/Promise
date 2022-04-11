@@ -1,6 +1,6 @@
 {
   "name": "small-promise",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "a small promise meet daily needs",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,9 @@
     "url": "git+https://github.com/fernandou/Promise.git"
   },
   "keywords": [
-    "Promise", "then", "catch"
+    "Promise",
+    "then",
+    "catch"
   ],
   "author": "fernandou",
   "license": "MIT",
