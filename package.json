@@ -4,7 +4,8 @@
   "description": "a small promise meet daily needs",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "release": "bash build/release.sh"
   },
   "repository": {
     "type": "git",
