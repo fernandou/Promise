@@ -1,7 +1,6 @@
 var assert = require('assert');
 const Promise =  require('../index')
 
-
 describe('base', function() {
   describe('resolve step1', function() {
     it('should resolve function argument', function() {
@@ -42,6 +41,36 @@ describe('base', function() {
       }).then(r => {
         assert.equal(newStr,2)
       });
+    });
+  });
+
+  describe('return promise', function() {
+    it('return last promise', function() {
+      const p1=new Promise((resolve,reject)=>{
+        setTimeout(()=>{
+          resolve('p1 is resolve')
+        },100)
+      })
+      
+      const p2=new Promise((resolve,reject)=>{
+        setTimeout(()=>{
+          resolve('p2 is resolve')
+        },100)
+      })
+      
+      const p3=new Promise((resolve,reject)=>{
+        setTimeout(()=>{
+          resolve('p3 is resolve')
+        },10)
+      })
+      
+      p1.then(()=>{
+        return p2.then(()=>{
+          return p3
+        })
+      }).then((res)=>{
+        assert.equal(res,'p3 is resolve')
+      })
     });
   });
 });
