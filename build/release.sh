@@ -9,15 +9,14 @@ then
   echo "Releasing $VERSION ..."
 
   # lint and test
-  # npm run lint 2>/dev/null
-  # npm run unit 2>/dev/null
+  npm run test 2>/dev/null
 
   # commit
   git add -A
   git commit -m "[build] $VERSION"
-  # npm version $VERSION --message "[release] $VERSION"
+  npm version $VERSION --message "[release] $VERSION"
 
   # publish
   git push
-  # npm publish
+  npm publish
 fi
