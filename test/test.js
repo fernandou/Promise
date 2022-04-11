@@ -1,6 +1,7 @@
 var assert = require('assert');
 const Promise =  require('../index')
 
+
 describe('base', function() {
   describe('resolve step1', function() {
     it('should resolve function argument', function() {
