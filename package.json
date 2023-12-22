@@ -1,6 +1,6 @@
 {
   "name": "small-promise",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "a small promise meet daily needs",
   "main": "dist/promise.common.js",
   "scripts": {
