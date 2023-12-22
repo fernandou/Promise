@@ -9,7 +9,7 @@ then
   echo "Releasing $VERSION ..."
 
   #  test
-  # npm run test >/dev/null
+  npm run test 2>/dev/null
 
   # commit
   git add -A
