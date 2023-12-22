@@ -3,54 +3,94 @@
     typeof define === 'function' && define.amd ? define(factory) :
       (global.Promise = factory());
 }(this, function () {
+  function noop() { }
+  let promiseID = 1
   'use strict';
+  // 1调用resolve或者reject的时候遍历当前promise的then数组
+  // 2调用then方法的时候判断当前promise的状态来决定立即执行或者保存到数组中
+  // 3链式调用的时候如果第一个promise状态时pedding，那就报道第一个promise中 
 
   //three state
   const STATE_PEDDING = 'pedding'
   const STATE_RESOLVE = 'resolve'
   const STATE_REJECT = 'reject'
-  function Promise(callback) {
+  function Promise(callback, prevPromise = null) {
     this.state = STATE_PEDDING
-    this.queue = []
+    this.queue = {}
+    this.queueId=1
     this.result = null
+    this.prevPromise = prevPromise
+    this.id = promiseID++
     callback(resolve.bind(this), reject.bind(this))
   }
 
   Promise.prototype.then = function () {
-    if (arguments.length === 0 || (typeof arguments[0] !== 'function' && typeof arguments[1] !== 'function')) {
+    if (arguments.length === 0) {
       return this
     }
-    //define a brand new promise for collecting then
-    const nextPromise = new Promise((resolve, reject) => {
+    this.linkPromise = new Promise(() => {
 
     })
     const twoFun = {}
 
-    if (arguments[0] && typeof arguments[0] === 'function') {
-      const resolveFun = arguments[0]
-      resolveFun.nextPromise = nextPromise
-      twoFun.resolve = resolveFun
-    }
-    if (arguments[1] && typeof arguments[1] === 'function') {
-      const rejectFun = arguments[1]
-      rejectFun.nextPromise = nextPromise
-      twoFun.reject = rejectFun
-    }
-    this.queue.push(twoFun)
-
-    if (this.state === STATE_PEDDING) {
-
-    } else {
-      if (waiting === false) {
-        waiting = true
-        nextTick(() => {
-          batch(this)
-          waiting = false
-        })
+    if (arguments.length === 1) {
+      if (typeof arguments[0] === 'function') {
+        twoFun.resolve = arguments[0]
+      } else {
+        twoFun.resolve = () => {
+          return arguments[0]
+        }
+      }
+      if (this.prevPromise) {
+        const prevPromise = this.prevPromise
+        prevPromise.queue[prevPromise.queueId].push(twoFun)
+        return prevPromise
+      } else {
+        if (this.state === STATE_PEDDING) {
+          this.queueId++
+          this.queue[this.queueId]=[twoFun]
+          return new Promise(noop, this)
+        } else {
+          if (this.state === STATE_RESOLVE) {
+            return Promise.resolve(twoFun.resolve.call(this,this.result))
+          } else if (this.state === STATE_REJECT) {
+            return this
+          }
+        }
+      }
+    } else if (arguments.length === 2) {
+      if (typeof arguments[0] === 'function') {
+        twoFun.resolve = arguments[0]
+      } else {
+        twoFun.resolve = () => {
+          return arguments[0]
+        }
+      }
+      if (typeof arguments[1] === 'function') {
+        twoFun.reject = arguments[0]
+      } else {
+        twoFun.reject = () => {
+          return arguments[1]
+        }
+      }
+      if (this.prevPromise) {
+        const prevPromise = this.prevPromise
+        prevPromise.queue[prevPromise.queueId].push(twoFun)
+        return prevPromise
+      } else {
+        if (this.state === STATE_PEDDING) {
+          this.queueId++
+          this.queue[this.queueId]=[twoFun]
+          return new Promise(noop, this)
+        } else {
+          if (this.state === STATE_RESOLVE) {
+            return Promise.resolve(twoFun.resolve.call(this,this.result))
+          } else if (this.state === STATE_REJECT) {
+            return Promise.resolve(twoFun.reject.call(this,this.result))
+          }
+        }
       }
     }
-
-    return nextPromise
   }
 
   Promise.prototype.catch = function (callback) {
@@ -59,54 +99,35 @@
 
   function batch(promise) {
     const queue = promise.queue
-    while (queue.length) {
-      const twoFun = queue.shift();
-      let nextPromise
-      // without a resolveFun，it amounts to crossing to this then
-      if (promise.state === STATE_RESOLVE && !twoFun[promise.state]) {
-        if (twoFun[STATE_REJECT]) {
-          nextPromise = twoFun[STATE_REJECT].nextPromise
-          if (nextPromise.queue.length) {
-            promise.queue.unshift({
-              resolve: nextPromise.queue[0].resolve,
-              reject: nextPromise.queue[0].reject
-            })
-            nextPromise.queue.shift()
-          }
-        }
-      } else if (promise.state === STATE_REJECT && !twoFun[promise.state]) {
-        // without a rejectFun，it amounts to crossing to this then
-        if (twoFun[STATE_RESOLVE]) {
-          nextPromise = twoFun[STATE_RESOLVE].nextPromise
-          if (nextPromise.queue.length) {
-            promise.queue.unshift({
-              resolve: nextPromise.queue[0].resolve,
-              reject: nextPromise.queue[0].reject
-            })
-            nextPromise.queue.shift()
-          }
-        }
-      } else {
-        nextPromise = twoFun[promise.state].nextPromise
-        const newPromise = twoFun[promise.state](promise.result)
 
-        if (!isPromise(newPromise)) {
-          nextPromise.state = STATE_RESOLVE
-          nextPromise.result = newPromise
-        } else {
-          newPromise.queue = nextPromise.queue
-          nextPromise = newPromise
-        }
-        if (nextPromise.state !== STATE_PEDDING) {
-          //use nextTick if the prev promise queue length
-          nextTick(() => {
-            if (nextPromise.queue.length) {
-              batch(nextPromise)
+    Object.keys(queue).forEach((_key) => {
+      const queue_child = queue[_key]
+      let doFnArray = []
+      queue_child.forEach((twoFun,index) => {
+        if(twoFun.reject){
+          if(index===0){
+            doFnArray[index] = function(){
+              return promise.then(twoFun.resolve,twoFun.reject)
             }
-          })
+          }else{
+            doFnArray[index] = function(){
+              return doFnArray[index-1]().then(twoFun.resolve,twoFun.reject)
+            }
+          }
+        }else{
+          if(index===0){
+            doFnArray[index] = function(){
+              return promise.then(twoFun.resolve)
+            }
+          }else{
+            doFnArray[index] = function(){
+              return doFnArray[index-1]().then(twoFun.resolve)
+            }
+          }
         }
-      }
-    }
+      })
+      doFnArray[queue_child.length-1]()
+    })
   }
   Promise.resolve = function (promise, reason) {
     if (isPromise(promise)) {
@@ -146,16 +167,6 @@
     batch(this)
   }
 
-  // thanks for Vue1.0
-  let waiting = false
-  function nextTick(callback) {
-    if (process) {
-      process.nextTick(callback)
-    } else {
-      setTimeout(callback, 0)
-    }
-  }
-
   function isPromise(obj) {
     if (!obj) {
       return false
@@ -165,4 +176,3 @@
 
   return Promise
 }))
-
