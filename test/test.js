@@ -1,5 +1,5 @@
 var assert = require('assert');
-const Promise =  require('../index')
+const Promise =  require('../dist/promise.common.js')
 
 describe('base', function() {
   describe('resolve step1', function() {
