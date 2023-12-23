@@ -21,5 +21,6 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module'
   },
+  ignorePatterns: ['dist', 'test'],
   rules: { camelcase: [0, { properties: 'always' }] }
 }
