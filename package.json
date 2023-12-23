@@ -1,10 +1,10 @@
 {
   "name": "small-promise",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "a small promise meet daily needs",
   "main": "dist/promise.common.js",
   "scripts": {
-    "test": "mocha",
+    "test": "npm run build && mocha",
     "build": "rollup --config",
     "release": "npm run build && bash build/release.sh"
   },
