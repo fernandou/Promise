@@ -1,16 +1,16 @@
-function noop() { }
+function noop () { }
 let promiseID = 1
-'use strict';
+
 // 1调用resolve或者reject的时候遍历当前promise的queue数组
 // 2调用then方法的时候判断当前promise的状态来决定立即执行或者保存到数组中
-// 3链式调用的时候如果第一个promise状态时pedding，那就先存储到第一个promise的queue中 
+// 3链式调用的时候如果第一个promise状态时pedding，那就先存储到第一个promise的queue中
 // 4queue是个二维数组
-//three state
+// three state
 const STATE_PEDDING = 'pedding'
 const STATE_RESOLVE = 'resolve'
 const STATE_REJECT = 'reject'
 
-function Promise(callback, prevPromise = null) {
+function Promise (callback, prevPromise = null) {
   this.state = STATE_PEDDING
   this.queue = {}
   this.queueId = 1
@@ -87,12 +87,12 @@ Promise.prototype.catch = function (callback) {
   return this.then(undefined, callback)
 }
 
-function batch(promise) {
+function batch (promise) {
   const queue = promise.queue
 
   Object.keys(queue).forEach((_key) => {
     const queue_child = queue[_key]
-    let doFnArray = []
+    const doFnArray = []
     queue_child.forEach((twoFun, index) => {
       const args = [twoFun.resolve]
       if (twoFun.reject) {
@@ -125,7 +125,7 @@ Promise.reject = function (promise, error) {
   return promiseFactory('reject', promise, error)
 }
 
-function promiseFactory(type, promise, result) {
+function promiseFactory (type, promise, result) {
   if (type === 'resolve') {
     return new Promise((resolve, reject) => {
       resolve(result)
@@ -137,19 +137,19 @@ function promiseFactory(type, promise, result) {
   }
 }
 
-function resolve(reason) {
+function resolve (reason) {
   this.state = STATE_RESOLVE
   this.result = reason
   batch(this)
 }
 
-function reject(error) {
+function reject (error) {
   this.state = STATE_REJECT
   this.result = error
   batch(this)
 }
 
-function isPromise(obj) {
+function isPromise (obj) {
   if (!obj) {
     return false
   }
