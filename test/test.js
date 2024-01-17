@@ -14,24 +14,24 @@ describe('base', function() {
       });
     });
   });
-  // describe('promise order', function() {
-  //   it('should order like under', function() {
-  //     let newStr = ''
-  //     let promise = new Promise(function(resolve, reject) {
-  //       newStr+='Promise'
-  //       resolve();
-  //     });
+  describe('promise order', function() {
+    it('should order like under', function() {
+      let newStr = ''
+      let promise = new Promise(function(resolve, reject) {
+        newStr+='Promise'
+        resolve();
+      });
       
-  //     promise.then(function() {
-  //       newStr+='resolved.'
-  //     });
+      promise.then(function() {
+        newStr+='resolved.'
+      });
       
-  //     newStr+='Hi!'
-  //     setTimeout(()=>{
-  //       assert.equal(newStr,'PromiseHi!resolved.')
-  //     })
-  //   });
-  // });
+      newStr+='Hi!'
+      setTimeout(()=>{
+        assert.equal(newStr,'PromiseHi!resolved.')
+      })
+    });
+  });
   describe('resolve or reject is not the finality', function() {
     it('newStr is 2', function() {
       let newStr = ''

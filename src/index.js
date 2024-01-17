@@ -39,7 +39,18 @@ Promise.prototype.then = function () {
           return new Promise(noop, this)
         } else {
           if (this.state === STATE_RESOLVE) {
-            return Promise.resolve(twoFun.resolve.call(this, this.result))
+            if (waiting === false) {
+              waiting = true
+              nextTick(() => {
+                batch(this)
+                waiting = false
+              })
+              this.queueId++
+              this.queue[this.queueId] = [twoFun]
+              return new Promise(noop, this)
+            } else {
+              return Promise.resolve(twoFun.resolve.call(this, this.result))
+            }
           } else if (this.state === STATE_REJECT) {
             return this
           }
@@ -67,13 +78,35 @@ Promise.prototype.then = function () {
       } else {
         if (this.state === STATE_RESOLVE) {
           if (typeof arguments[0] === 'function') {
-            return Promise.resolve(twoFun.resolve.call(this, this.result))
+            if (waiting === false) {
+              waiting = true
+              nextTick(() => {
+                batch(this)
+                waiting = false
+              })
+              this.queueId++
+              this.queue[this.queueId] = [twoFun]
+              return new Promise(noop, this)
+            } else {
+              return Promise.resolve(twoFun.resolve.call(this, this.result))
+            }
           } else {
             return this
           }
         } else if (this.state === STATE_REJECT) {
           if (typeof arguments[1] === 'function') {
-            return Promise.resolve(twoFun.reject.call(this, this.result))
+            if (waiting === false) {
+              waiting = true
+              nextTick(() => {
+                batch(this)
+                waiting = false
+              })
+              this.queueId++
+              this.queue[this.queueId] = [twoFun]
+              return new Promise(noop, this)
+            } else {
+              return Promise.resolve(twoFun.reject.call(this, this.result))
+            }
           } else {
             return this
           }
@@ -147,6 +180,16 @@ function reject (error) {
   this.state = STATE_REJECT
   this.result = error
   batch(this)
+}
+
+// thanks for Vue1.0
+let waiting = false
+function nextTick (callback) {
+  if (process) {
+    process.nextTick(callback)
+  } else {
+    setTimeout(callback, 0)
+  }
 }
 
 function isPromise (obj) {
