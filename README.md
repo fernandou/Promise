@@ -21,7 +21,3 @@ p1.then((res)=>{
   console.log(res)
 })
 ~~~
-
-## problem
-
-调用then方法的时候如果不是pedding状态，原生的Promise会放进微任务批量处理，这里的Promise是立即执行
